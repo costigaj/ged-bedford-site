@@ -223,6 +223,108 @@ Online Instruction: Mornings, Afternoons and Evenings
 <em>Don’t wait - your future starts today!</em>
 </p>
 </div>
+<script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+<script>
+// Ably real-time banner control with secure token authentication
+(function() {
+    const CHANNEL_NAME = 'ged-banner-control';
+    
+    // Get banner elements
+    const banner = document.querySelector('.alert-banner');
+    const messageParagraph = banner ? banner.querySelector('p:last-child') : null;
+    
+    if (!banner || !messageParagraph) {
+        console.error('Banner elements not found');
+        return;
+    }
+    
+    async function initializeAbly() {
+        try {
+            console.log('Getting Ably token...');
+            
+            // Get token from serverless function
+            const response = await fetch('/.netlify/functions/ably-token');
+            
+            if (!response.ok) {
+                throw new Error('Failed to get token');
+            }
+            
+            const tokenRequest = await response.json();
+            
+            // Connect using token authentication
+            const ably = new Ably.Realtime({ 
+                authCallback: function(params, callback) {
+                    callback(null, tokenRequest);
+                }
+            });
+            
+            const channel = ably.channels.get(CHANNEL_NAME);
+            
+            // Connection state handling
+            ably.connection.on('connected', function() {
+                console.log('Connected to Ably');
+            });
+            
+            ably.connection.on('disconnected', function() {
+                console.log('Disconnected from Ably');
+            });
+            
+            ably.connection.on('failed', function() {
+                console.error('Ably connection failed');
+            });
+            
+            // Listen for banner updates
+            channel.subscribe('banner-update', function(message) {
+                console.log('Received banner update:', message.data);
+                
+                const { visible, text } = message.data;
+                
+                if (visible) {
+                    banner.classList.remove('banner-hidden');
+                    if (text) {
+                        messageParagraph.textContent = text;
+                    }
+                } else {
+                    banner.classList.add('banner-hidden');
+                }
+            });
+            
+            // Request current state on page load
+            channel.subscribe('banner-state-response', function(message) {
+                console.log('Received current state:', message.data);
+                
+                const { visible, text } = message.data;
+                
+                if (visible) {
+                    banner.classList.remove('banner-hidden');
+                    if (text) {
+                        messageParagraph.textContent = text;
+                    }
+                } else {
+                    banner.classList.add('banner-hidden');
+                }
+            });
+            
+            // Request current state after connection
+            ably.connection.once('connected', function() {
+                setTimeout(function() {
+                    channel.publish('banner-state-request', { timestamp: Date.now() });
+                }, 500);
+            });
+            
+        } catch (error) {
+            console.error('Failed to initialize Ably:', error);
+        }
+    }
+    
+    // Initialize when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeAbly);
+    } else {
+        initializeAbly();
+    }
+})();
+</script>
 
 
 
