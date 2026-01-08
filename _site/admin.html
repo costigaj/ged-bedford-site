@@ -360,6 +360,9 @@
                 return;
             }
 
+            // Save message to localStorage
+            localStorage.setItem('lastBannerMessage', message);
+
             currentState = {
                 visible: true,
                 text: message
@@ -375,6 +378,9 @@
         function hideBanner() {
             const message = document.getElementById('bannerMessage').value.trim();
             
+            // Save message to localStorage
+            localStorage.setItem('lastBannerMessage', message);
+            
             currentState = {
                 visible: false,
                 text: message
@@ -389,10 +395,22 @@
         // Initialize on page load
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
+                // Load last message from localStorage
+                const savedMessage = localStorage.getItem('lastBannerMessage');
+                if (savedMessage) {
+                    document.getElementById('bannerMessage').value = savedMessage;
+                }
+                
                 initializeAbly();
                 updateDisplay(currentState.visible, currentState.text);
             });
         } else {
+            // Load last message from localStorage
+            const savedMessage = localStorage.getItem('lastBannerMessage');
+            if (savedMessage) {
+                document.getElementById('bannerMessage').value = savedMessage;
+            }
+            
             initializeAbly();
             updateDisplay(currentState.visible, currentState.text);
         }
