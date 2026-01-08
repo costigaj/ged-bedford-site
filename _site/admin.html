@@ -294,6 +294,16 @@
                     // Request current state from other admins or main site
                     if (!stateLoaded) {
                         channel.publish('banner-state-request', { timestamp: Date.now() });
+                        
+                        // If no response after 3 seconds, assume banner is hidden
+                        setTimeout(function() {
+                            if (!stateLoaded) {
+                                console.log('No state response received, defaulting to hidden');
+                                stateLoaded = true;
+                                // Keep the localStorage message but show as hidden
+                                updateDisplay(false, currentState.text || '');
+                            }
+                        }, 3000);
                     }
                 });
 
