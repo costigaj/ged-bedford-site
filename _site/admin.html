@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner Control - Goodwill GED</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8f1f8 0%, #f5f8fb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .control-panel {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 80, 158, 0.15);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #00509E;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #00509E;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .status-dot.active {
+            background: #D9534F;
+            box-shadow: 0 0 10px rgba(217, 83, 79, 0.5);
+        }
+
+        .status-dot.inactive {
+            background: #5CB85C;
+        }
+
+        .connection-status {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 10px;
+            padding: 8px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .connection-status.connected {
+            color: #5CB85C;
+            background: #d4edda;
+        }
+
+        .connection-status.connecting {
+            color: #F0AD4E;
+            background: #fff3cd;
+        }
+
+        .banner-preview {
+            background: #D9534F;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .banner-preview.hidden {
+            display: none;
+        }
+
+        .message-input {
+            margin-bottom: 20px;
+        }
+
+        .message-input label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .message-input textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d0dce8;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .message-input textarea:focus {
+            outline: none;
+            border-color: #00509E;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-show {
+            background: #D9534F;
+            color: white;
+        }
+
+        .btn-show:hover:not(:disabled) {
+            background: #c9302c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(217, 83, 79, 0.3);
+        }
+
+        .btn-hide {
+            background: #5CB85C;
+            color: white;
+        }
+
+        .btn-hide:hover:not(:disabled) {
+            background: #4cae4c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(92, 184, 92, 0.3);
+        }
+
+        .info-note {
+            margin-top: 30px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #555;
+            border-left: 4px solid #00509E;
+        }
+
+        .info-note strong {
+            color: #00509E;
+        }
+
+        @media (max-width: 600px) {
+            .control-panel {
+                padding: 25px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h1>🚨 Banner Control</h1>
+        <p class="subtitle">Manage class cancellation alerts in real-time</p>
+
+        <div class="connection-status" id="connectionStatus">Connecting to Ably...</div>
+
+        <div class="status-section">
+            <div class="status-label">Current Status:</div>
+            <div class="status-indicator">
+                <span class="status-dot inactive" id="statusDot"></span>
+                <span id="statusText">Loading...</span>
+            </div>
+            <div class="banner-preview hidden" id="bannerPreview"></div>
+        </div>
+
+        <div class="message-input">
+            <label for="bannerMessage">Banner Message:</label>
+            <textarea 
+                id="bannerMessage" 
+                placeholder="Enter cancellation message..."
+            >Bedford location classes cancelled on 1/9/2026 due to weather</textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-show" id="showBtn" onclick="showBanner()" disabled>
+                📢 Show Banner
+            </button>
+            <button class="btn-hide" id="hideBtn" onclick="hideBanner()" disabled>
+                ✅ Hide Banner
+            </button>
+        </div>
+
+        <div class="info-note">
+            <strong>Real-time control:</strong> Changes appear instantly for all visitors on the main site. Bookmark this page on your phone for easy access anytime!
+        </div>
+    </div>
+
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script>
+        const CHANNEL_NAME = 'ged-banner-control';
+        
+        let currentState = {
+            visible: false,
+            text: 'Bedford location classes cancelled on 1/9/2026 due to weather'
+        };
+
+        let ably = null;
+        let channel = null;
+
+        // Initialize Ably with token authentication
+        async function initializeAbly() {
+            try {
+                const statusEl = document.getElementById('connectionStatus');
+                statusEl.textContent = 'Getting secure token...';
+                statusEl.className = 'connection-status connecting';
+                
+                // Get token from serverless function
+                const response = await fetch('/.netlify/functions/ably-token');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to get token');
+                }
+                
+                const tokenRequest = await response.json();
+                
+                // Connect using token authentication
+                ably = new Ably.Realtime({ 
+                    authCallback: function(params, callback) {
+                        callback(null, tokenRequest);
+                    }
+                });
+                
+                channel = ably.channels.get(CHANNEL_NAME);
+
+                // Connection status handlers
+                ably.connection.on('connected', function() {
+                    document.getElementById('connectionStatus').textContent = '✓ Connected to Ably';
+                    document.getElementById('connectionStatus').className = 'connection-status connected';
+                    document.getElementById('showBtn').disabled = false;
+                    document.getElementById('hideBtn').disabled = false;
+                });
+
+                ably.connection.on('connecting', function() {
+                    document.getElementById('connectionStatus').textContent = 'Connecting...';
+                    document.getElementById('connectionStatus').className = 'connection-status connecting';
+                });
+
+                ably.connection.on('disconnected', function() {
+                    document.getElementById('connectionStatus').textContent = '⚠ Disconnected';
+                    document.getElementById('connectionStatus').className = 'connection-status';
+                    document.getElementById('showBtn').disabled = true;
+                    document.getElementById('hideBtn').disabled = true;
+                });
+
+                ably.connection.on('failed', function() {
+                    document.getElementById('connectionStatus').textContent = '✗ Connection failed';
+                    document.getElementById('connectionStatus').className = 'connection-status';
+                    document.getElementById('showBtn').disabled = true;
+                    document.getElementById('hideBtn').disabled = true;
+                });
+
+                // Listen for state requests and respond with current state
+                channel.subscribe('banner-state-request', function(message) {
+                    channel.publish('banner-state-response', currentState);
+                });
+
+                // Listen for updates from other admins
+                channel.subscribe('banner-update', function(message) {
+                    currentState = message.data;
+                    updateDisplay(currentState.visible, currentState.text);
+                });
+                
+            } catch (error) {
+                console.error('Failed to initialize Ably:', error);
+                document.getElementById('connectionStatus').textContent = '✗ Failed to connect: ' + error.message;
+                document.getElementById('connectionStatus').className = 'connection-status';
+            }
+        }
+
+        // Update the display
+        function updateDisplay(isVisible, message) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const bannerPreview = document.getElementById('bannerPreview');
+
+            if (isVisible) {
+                statusDot.className = 'status-dot active';
+                statusText.textContent = 'Banner is VISIBLE';
+                statusText.style.color = '#D9534F';
+                statusText.style.fontWeight = '700';
+                bannerPreview.textContent = message;
+                bannerPreview.classList.remove('hidden');
+            } else {
+                statusDot.className = 'status-dot inactive';
+                statusText.textContent = 'Banner is HIDDEN';
+                statusText.style.color = '#5CB85C';
+                statusText.style.fontWeight = '600';
+                bannerPreview.classList.add('hidden');
+            }
+
+            document.getElementById('bannerMessage').value = message;
+        }
+
+        // Show banner
+        function showBanner() {
+            const message = document.getElementById('bannerMessage').value.trim();
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            currentState = {
+                visible: true,
+                text: message
+            };
+
+            if (channel) {
+                channel.publish('banner-update', currentState);
+                updateDisplay(true, message);
+            }
+        }
+
+        // Hide banner
+        function hideBanner() {
+            const message = document.getElementById('bannerMessage').value.trim();
+            
+            currentState = {
+                visible: false,
+                text: message
+            };
+
+            if (channel) {
+                channel.publish('banner-update', currentState);
+                updateDisplay(false, message);
+            }
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeAbly();
+                updateDisplay(currentState.visible, currentState.text);
+            });
+        } else {
+            initializeAbly();
+            updateDisplay(currentState.visible, currentState.text);
+        }
+    </script>
+</body>
+</html>
