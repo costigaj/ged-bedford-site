@@ -229,7 +229,7 @@
             <textarea 
                 id="bannerMessage" 
                 placeholder="Enter cancellation message..."
-            >Bedford location classes cancelled on 1/9/2026 due to weather</textarea>
+            ></textarea>
         </div>
 
         <div class="button-group">
@@ -252,11 +252,12 @@
         
         let currentState = {
             visible: false,
-            text: 'Bedford location classes cancelled on 1/9/2026 due to weather'
+            text: ''
         };
 
         let ably = null;
         let channel = null;
+        let stateLoaded = false;
 
         // Initialize Ably with token authentication
         async function initializeAbly() {
@@ -289,6 +290,11 @@
                     document.getElementById('connectionStatus').className = 'connection-status connected';
                     document.getElementById('showBtn').disabled = false;
                     document.getElementById('hideBtn').disabled = false;
+                    
+                    // Request current state from other admins or main site
+                    if (!stateLoaded) {
+                        channel.publish('banner-state-request', { timestamp: Date.now() });
+                    }
                 });
 
                 ably.connection.on('connecting', function() {
@@ -312,13 +318,35 @@
 
                 // Listen for state requests and respond with current state
                 channel.subscribe('banner-state-request', function(message) {
-                    channel.publish('banner-state-response', currentState);
+                    if (stateLoaded) {
+                        channel.publish('banner-state-response', currentState);
+                    }
                 });
 
-                // Listen for updates from other admins
-                channel.subscribe('banner-update', function(message) {
+                // Listen for state responses (from main site or other admins)
+                channel.subscribe('banner-state-response', function(message) {
+                    console.log('Received banner state:', message.data);
                     currentState = message.data;
+                    stateLoaded = true;
                     updateDisplay(currentState.visible, currentState.text);
+                    
+                    // Also save to localStorage for next time
+                    if (currentState.text) {
+                        localStorage.setItem('lastBannerMessage', currentState.text);
+                    }
+                });
+
+                // Listen for updates from other admins or changes
+                channel.subscribe('banner-update', function(message) {
+                    console.log('Received banner update:', message.data);
+                    currentState = message.data;
+                    stateLoaded = true;
+                    updateDisplay(currentState.visible, currentState.text);
+                    
+                    // Also save to localStorage
+                    if (currentState.text) {
+                        localStorage.setItem('lastBannerMessage', currentState.text);
+                    }
                 });
                 
             } catch (error) {
@@ -395,24 +423,26 @@
         // Initialize on page load
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
-                // Load last message from localStorage
+                // Try to load last message from localStorage first
                 const savedMessage = localStorage.getItem('lastBannerMessage');
                 if (savedMessage) {
                     document.getElementById('bannerMessage').value = savedMessage;
+                    currentState.text = savedMessage;
                 }
                 
+                // Then connect to Ably to get real current state
                 initializeAbly();
-                updateDisplay(currentState.visible, currentState.text);
             });
         } else {
-            // Load last message from localStorage
+            // Try to load last message from localStorage first
             const savedMessage = localStorage.getItem('lastBannerMessage');
             if (savedMessage) {
                 document.getElementById('bannerMessage').value = savedMessage;
+                currentState.text = savedMessage;
             }
             
+            // Then connect to Ably to get real current state
             initializeAbly();
-            updateDisplay(currentState.visible, currentState.text);
         }
     </script>
 </body>
