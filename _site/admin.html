@@ -295,13 +295,13 @@
                     if (!stateLoaded) {
                         channel.publish('banner-state-request', { timestamp: Date.now() });
                         
-                        // If no response after 3 seconds, assume banner is hidden
+                        // If no response after 3 seconds, assume banner is VISIBLE (safer default)
                         setTimeout(function() {
                             if (!stateLoaded) {
-                                console.log('No state response received, defaulting to hidden');
+                                console.log('No state response received, defaulting to VISIBLE for safety');
                                 stateLoaded = true;
-                                // Keep the localStorage message but show as hidden
-                                updateDisplay(false, currentState.text || '');
+                                // Show as visible so user can hide it if needed
+                                updateDisplay(true, currentState.text || 'Check main site and update message if needed');
                             }
                         }, 3000);
                     }
