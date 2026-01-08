@@ -1,0 +1,8 @@
+{
+  "name": "goodwill-ged-site",
+  "version": "1.0.0",
+  "description": "Goodwill GED Prep website with Ably banner control",
+  "dependencies": {
+    "ably": "^1.2.50"
+  }
+}
